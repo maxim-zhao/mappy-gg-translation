@@ -14,12 +14,15 @@ banksize $4000
 banks BankCount
 .endro
 
+; Load in the ROM to patch
 .background "Mappy (JP).gg"
 .emptyfill $ff
 
+.sdsctag 1.10, "Mappy English translation", "", "Maxim"
+
 ; Let's mark unused areas as free
-;.unbackground $00006 $00037
-;.unbackground $07fe9 $07fef
+.unbackground $00006 $00037
+.unbackground $07fd9 $07fff ; Space for a header...
 ;.unbackground $0bc61 $0bfff
 ;.unbackground $0fc26 $0ffff
 ;.unbackground $13be0 $13fff
