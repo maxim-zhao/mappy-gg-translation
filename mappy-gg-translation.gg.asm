@@ -18,6 +18,7 @@ banks BankCount
 .background "Mappy (JP).gg"
 .emptyfill $ff
 
+; Add SDSC header. This fixes the checksum but also sets the region code to SMS...
 .sdsctag 1.10, "Mappy English translation", "", "Maxim"
 
 ; Let's mark unused areas as free
