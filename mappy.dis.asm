@@ -1213,24 +1213,28 @@ Copyright (C) Marcel de Kogel 1996,1997
     call   $3bd8           ; 00096A CD D8 3B 
     call   $3eb0           ; 00096D CD B0 3E 
     call   $3ae2           ; 000970 CD E2 3A 
+
+    ; Load options screen
+    ; Tiles:
+    ; Set VRAM address to 0
     xor    a               ; 000973 AF 
     out    ($bf),a         ; 000974 D3 BF 
     ld     a,$40           ; 000976 3E 40 
     out    ($bf),a         ; 000978 D3 BF 
-
-    ; Load title screen tiles
+    ; Load data
     ld     hl,$b08b        ; 00097A 21 8B B0 
     ld     a,$02           ; 00097D 3E 02 
     call   $4124           ; 00097F CD 24 41 ; Paging
     call   $3ffd           ; 000982 CD FD 3F ; Decode tiles
     call   $4134           ; 000985 CD 34 41 ; Restore paging
+    ; Tilemap:
     ld     a,$04           ; 000988 3E 04 
-    call   $4124           ; 00098A CD 24 41 
-    ld     hl,$3a12        ; 00098D 21 12 3A 
-    ld     de,$b2e6        ; 000990 11 E6 B2 
-    call   $4b2e           ; 000993 CD 2E 4B 
-    call   $4134           ; 000996 CD 34 41 
-    call   $3bbf           ; 000999 CD BF 3B 
+    call   $4124           ; 00098A CD 24 41 ; Paging
+    ld     hl,$3a12        ; 00098D 21 12 3A ; Destination VRAM address
+    ld     de,$b2e6        ; 000990 11 E6 B2 ; Source data
+    call   $4b2e           ; 000993 CD 2E 4B ; Load
+    call   $4134           ; 000996 CD 34 41 ; Restore paging
+    call   $3bbf           ; 000999 CD BF 3B ; Screen on?
     ei                     ; 00099C FB 
     call   $1a50           ; 00099D CD 50 1A 
     ld     a,$06           ; 0009A0 3E 06 
@@ -9538,52 +9542,72 @@ Copyright (C) Marcel de Kogel 1996,1997
     ld     a,$04           ; 004B28 3E 04 
     ld     ($c008),a       ; 004B2A 32 08 C0 
     ret                    ; 004B2D C9 
-    ld     a,(de)          ; 004B2E 1A 
-    cp     $ff             ; 004B2F FE FF 
-    ret    z               ; 004B31 C8 
+    
+LoadTilemap:    
+; hl = VRAM address to write to
+; de = source data
+;
+; Data format:
+; Bytes are tilemap values, except:
+; $ff = end
+; $fe $nn $dd = RLE, value $dd n times
+; $fe $nn $00 = skip n entries without writing
+; So you have to do RLE runs of 1 for data values $ff and $fe, and you can't RLE data value $00.
+    ld     a,(de)          ; 004B2E 1A        ; Read byte
+    cp     $ff             ; 004B2F FE FF     ; $ff = end
+    ret    z               ; 004B31 C8        ; $fe = rle
     cp     $fe             ; 004B32 FE FE 
-    jp     z,$4b51         ; 004B34 CA 51 4B 
-    ld     a,l             ; 004B37 7D 
+    jp     z,_rle ;$4b51   ; 004B34 CA 51 4B 
+    
+    ld     a,l             ; 004B37 7D        ; Set VRAM address
     and    $fe             ; 004B38 E6 FE 
     out    ($bf),a         ; 004B3A D3 BF 
     ld     a,h             ; 004B3C 7C 
     and    $3f             ; 004B3D E6 3F 
     or     $40             ; 004B3F F6 40 
     out    ($bf),a         ; 004B41 D3 BF 
-    ld     a,(de)          ; 004B43 1A 
+    
+    ld     a,(de)          ; 004B43 1A        ; Emit byte
     out    ($be),a         ; 004B44 D3 BE 
     ld     a,$00           ; 004B46 3E 00 
     inc    de              ; 004B48 13 
-    inc    hl              ; 004B49 23 
+    inc    hl              ; 004B49 23        ; Move pointers on
     inc    hl              ; 004B4A 23 
     nop                    ; 004B4B 00 
-    out    ($be),a         ; 004B4C D3 BE 
-    jp     $4b2e           ; 004B4E C3 2E 4B 
-    inc    de              ; 004B51 13 
+    out    ($be),a         ; 004B4C D3 BE     ; Emit zero as high byte
+    jp     LoadTilemap ;$4b2e ; 004B4E C3 2E 4B 
+
+_rle:    
+    inc    de              ; 004B51 13        ; Next byte
     ld     a,(de)          ; 004B52 1A 
     inc    de              ; 004B53 13 
-    ld     b,a             ; 004B54 47 
-    ld     a,(de)          ; 004B55 1A 
-    and    a               ; 004B56 A7 
-    jp     z,$4b6f         ; 004B57 CA 6F 4B 
-    ld     a,l             ; 004B5A 7D 
+    ld     b,a             ; 004B54 47        ; = run length
+-:  ld     a,(de)          ; 004B55 1A        ; Next byte
+    and    a               ; 004B56 A7
+    jp     z,+ ;$4b6f      ; 004B57 CA 6F 4B  ; Check for zero
+
+    ld     a,l             ; 004B5A 7D        ; Set VRAM address
     and    $fe             ; 004B5B E6 FE 
     out    ($bf),a         ; 004B5D D3 BF 
     ld     a,h             ; 004B5F 7C 
     and    $3f             ; 004B60 E6 3F 
     or     $40             ; 004B62 F6 40 
     out    ($bf),a         ; 004B64 D3 BF 
-    ld     a,(de)          ; 004B66 1A 
+    
+    ld     a,(de)          ; 004B66 1A        ; Emit byte
     out    ($be),a         ; 004B67 D3 BE 
     push   af              ; 004B69 F5 
     pop    af              ; 004B6A F1 
     ld     a,$00           ; 004B6B 3E 00 
-    out    ($be),a         ; 004B6D D3 BE 
-    inc    hl              ; 004B6F 23 
+    out    ($be),a         ; 004B6D D3 BE     ; Emit zero as high byte
++:
+    inc    hl              ; 004B6F 23        ; Move VRAM pointer on
     inc    hl              ; 004B70 23 
-    djnz   $4b55           ; 004B71 10 E2 
+    djnz   - ;$4b55        ; 004B71 10 E2     ; RLE run loop
     inc    de              ; 004B73 13 
-    jp     $4b2e           ; 004B74 C3 2E 4B 
+    jp     LoadTilemap ;$4b2e ; 004B74 C3 2E 4B 
+    
+    
     ld     b,$04           ; 004B77 06 04 
     ld     a,e             ; 004B79 7B 
     and    $fe             ; 004B7A E6 FE 
