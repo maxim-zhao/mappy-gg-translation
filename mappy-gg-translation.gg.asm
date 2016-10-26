@@ -22,7 +22,7 @@ banks BankCount
 .sdsctag 1.10, "Mappy English translation", "", "Maxim"
 
 ; Let's mark unused areas as free
-.unbackground $00006 $00037
+.unbackground $00006 $00037 ; Space for SDSC text
 .unbackground $07fd9 $07fff ; Space for a header...
 ;.unbackground $0bc61 $0bfff
 ;.unbackground $0fc26 $0ffff
