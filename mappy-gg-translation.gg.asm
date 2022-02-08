@@ -18,8 +18,17 @@ banks BankCount
 .background "Mappy (JP).gg"
 .emptyfill $ff
 
-; Add SDSC header. This fixes the checksum but also sets the region code to SMS...
+; Add SDSC header
 .sdsctag 1.10, "Mappy English translation", "", "Maxim"
+; We also specify a manual header to match the original.
+.smsheader
+    productcode $27, $40, $1
+    reservedspace $14, $00
+    version 0
+    regioncode 5
+    romsize $f
+    forcechecksum 0
+.endsms
 
 ; Let's mark unused areas as free
 .unbackground $00006 $00037 ; Space for SDSC text

@@ -1,3 +1,5 @@
 *.gg
 *.ips
 *.sym
+*.o
+*.zip
